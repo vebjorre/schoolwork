@@ -1,3 +1,6 @@
+#Small project in TMA4215 Numerical Mathematics
+#Classification of red/blue points in 4D-space using Deep learning.
+
 import numpy as np
 import numpy.random as rnd
 import matplotlib.pyplot as plt

@@ -1,3 +1,4 @@
+#Small project done in TMA4268 Statistical learning
 #Using different statistical methods to determine whether women have diabetes or not
 
 #Importing data set
