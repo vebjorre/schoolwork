@@ -1,6 +1,6 @@
 # Folder to show a small sample of my schoolwork.
 
-Keep in mind that the coding is done to fulfill demands from professors, not to be efficient or very elegant :)
+Keep in mind that the coding is done to fulfill demands from professors, not necessarily to be elegant and clean :)
 
 ## Deep_learning.py:
 Project in TMA4315 Numerical mathematics.
