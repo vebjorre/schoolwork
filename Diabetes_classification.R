@@ -26,8 +26,9 @@ summary(ctrain)
 #ctrain.tmp$diabetes<-as.factor(ctrain.tmp$diabetes)
 #ctrain.tmp$npreg<-as.factor(ctrain.tmp$npreg)
 #ggpairs(ctrain.tmp,cardinality_threshold = 16)
+ggpairs(ctrain)
 corrplot(cor(ctrain))
-# ggpairs(ctrain)
+
 
 #Scale and center data
 mean <- apply(ctrain[,-1], 2, mean) #not diabetes, in column 1                                 
@@ -44,7 +45,7 @@ resmat=matrix(ncol=2,nrow=8)
 # misclassification rate test data, AUC
 # for all the methods considered here
 colnames(resmat)=c("Misclassification rate","AUC")
-rownames(resmat)=c("KNN","LDA","logistic regression","decision tree","pruned tree","SVC","SVM","NN h0")
+rownames(resmat)=c("KNN","LDA","logistic regression","classification tree","pruned tree","SVC","SVM","NN")
 
 #===============================================================================================
 #Need factors to have valid var.names for trainControl()
@@ -61,7 +62,7 @@ set.seed(0)
 #CV to find best K
 train.control <- trainControl(method = "cv", number=5, classProbs=TRUE, summaryFunction = twoClassSummary)
 #train knn model
-knn.mod <- train(diabetes ~ ., data=knn.train.xy, "knn", trControl = train.control,tuneLength=20)
+knn.mod <- train(diabetes ~ ., data=knn.train.xy, "knn", trControl = train.control,tuneLength=50)
 print(knn.mod)
 #test with test data
 knn.res <- predict(knn.mod,newdata=test.x)
@@ -105,7 +106,7 @@ resmat[3,1] = logist.missrate
 resmat[3,2] = logist.roc$auc
 #===============================================================================================
 
-#Decision tree:
+#Classification tree:
 
 set.seed(2)
 tree.mod <- tree(diabetes ~ ., train.xy, split="gini")
@@ -226,3 +227,8 @@ resmat[8,1] = nnet.missrate
 resmat[8,2] = nnet.roc$auc
 
 print(resmat)
+
+plot(knn.roc)
+plot(lda.roc,add=TRUE)
+plot(logist.roc,add=TRUE)
+plot(nnet.roc,add=TRUE)

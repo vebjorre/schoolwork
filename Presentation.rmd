@@ -1,0 +1,123 @@
+---
+title: "Diabetes classification"
+output: powerpoint_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(caret)
+library(pROC)
+library(ggplot2)
+library(GGally)
+library(corrplot)
+library(MASS)
+library(e1071)
+library(tree)
+library(nnet)
+library(NeuralNetTools)
+flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
+ctrain=flying$ctrain
+ctest=flying$ctest
+```
+## Oppgaven
+Use different methods to analyse the data. In particular use one method from each of Modules 4 (Classification), 8 (Tree-based methods), 9 (Support vector machines) and 11 (Neural Networks). 
+For each method you
+
+- clearly write out the model and model assumptions for the method
+- explain how any tuning parameters are chosen or model selection is performed
+- report (any) insight into the interpretation of the fitted model
+- evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
+
+## Dagens fokus
+- Hva ble gjort?
+- Hvordan burde det vært gjort?
+
+## Generelt om datasettet
+- `diabetes`: 0= not present, 1= present
+- `npreg`: number of pregnancies
+- `glu`: plasma glucose concentration in an oral glucose tolerance test
+- `bp`: diastolic blood pressure (mmHg)
+- `skin`: triceps skin fold thickness (mm)
+- `bmi`: body mass index (weight in kg/(height in m)$^2$)
+- `ped`: diabetes pedigree function.
+- `age`: age in years
+
+---
+```{R, echo=TRUE}
+summary(ctrain)
+```
+
+---
+```{r}
+ggpairs(ctrain)
+```
+```{r}
+## Korrelasjonsplott
+corrplot(cor(ctrain))
+```
+
+## Skalering
+
+```{r,echo=TRUE}
+#Data already divided into train and test set
+
+mean <- apply(ctrain[,-1], 2, mean)                                
+std <- apply(ctrain[,-1], 2, sd)
+train.x <- data.frame(scale(ctrain[,-1], center = mean, scale = std))
+test.x <- data.frame(scale(ctest[,-1], center = mean, scale = std))
+
+train.y <- as.factor(ctrain[,1])
+test.y <- as.factor(ctest[,1])
+train.xy <- data.frame(train.x,diabetes=train.y)
+test.xy <- data.frame(test.x,diabetes=test.y)
+```
+
+```{r}
+resmat=matrix(ncol=2,nrow=8)
+# misclassification rate test data, AUC
+# for all the methods considered here
+colnames(resmat)=c("Misclassification rate","AUC")
+rownames(resmat)=c("KNN","LDA","logistic regression","classification tree","pruned tree","SVC","SVM","NN")
+```
+
+```{r}
+knn.train.y <- as.factor(ctrain[,1]) 
+knn.test.y <- as.factor(ctest[,1])
+```
+## K-Nearest-Neighbours
+Cross-validation er vanskelig.
+```{r, echo=TRUE}
+knn.train.y <- factor(knn.train.y, labels=c("O","I")) 
+knn.test.y <- factor(knn.test.y, labels=c("O", "I"))
+```
+## K-Nearest-Neighbours
+```{r,echo=TRUE}
+knn.train.xy <- data.frame(train.x,diabetes=knn.train.y)
+knn.test.xy <- data.frame(test.x,diabetes=knn.test.y)
+
+#K nearest neighbours classification:
+
+set.seed(0)
+#Easy way to choose good K
+train.control <- trainControl(method = "cv", number=5, classProbs=TRUE, summaryFunction = twoClassSummary)
+#train knn model
+knn.mod <- train(diabetes ~ ., data=knn.train.xy, "knn", trControl = train.control,tuneLength=50)
+print(knn.mod)
+#test with test data
+knn.res <- predict(knn.mod,newdata=test.x)
+knn.prob <- predict(knn.mod,newdata=test.x, type="prob")
+knn.conf <- confusionMatrix(knn.res,knn.test.y)$table
+knn.missrate <- 1 - sum(diag(knn.conf))/sum(knn.conf)
+#plot ROC
+knn.roc <- roc(knn.test.y, knn.prob[,2])
+ggroc(knn.roc)+ggtitle("ROC curve - K-Nearest-Neighbours") + annotate("text", x = 0.25, y = 0.3, label = paste("AUC = ", as.character(round(auc(knn.roc), 4))))
+```
+```{r}
+resmat[1,1] = knn.missrate
+resmat[1,2] = knn.roc$auc
+```
+
