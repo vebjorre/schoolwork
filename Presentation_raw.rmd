@@ -1,7 +1,13 @@
-#Small project done in TMA4268 Statistical learning
-#Using different statistical methods to determine whether women have diabetes or not
+---
+title: "Diabetes classification"
+output: powerpoint_presentation
+---
 
-#Load packages used in project:
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r, include=FALSE}
 library(tidyverse)
 library(caret)
 library(pROC)
@@ -13,56 +19,102 @@ library(e1071)
 library(tree)
 library(nnet)
 library(NeuralNetTools)
-
-#Import data set
 flying=dget("https://www.math.ntnu.no/emner/TMA4268/2019v/data/flying.dd")
 ctrain=flying$ctrain
 ctest=flying$ctest
-#Summary of training data:
+set.seed(0)
+```
+## Oppgaven
+Use different methods to analyse the data. In particular use one method from each of Modules 4 (Classification), 8 (Tree-based methods), 9 (Support vector machines) and 11 (Neural Networks). 
+For each method you
+
+- clearly write out the model and model assumptions for the method
+- explain how any tuning parameters are chosen or model selection is performed
+- report (any) insight into the interpretation of the fitted model
+- evaluate the model using the test data, and report misclassifiation rate (cut-off 0.5 on probability) and plot ROC-curves and give the AUC (for method where class probabilities are given).
+
+## Dagens fokus
+- Hva ble gjort?
+- Hvordan burde det v?rt gjort?
+
+## Generelt om datasettet
+- `diabetes`: 0= not present, 1= present
+- `npreg`: number of pregnancies
+- `glu`: plasma glucose concentration in an oral glucose tolerance test
+- `bp`: diastolic blood pressure (mmHg)
+- `skin`: triceps skin fold thickness (mm)
+- `bmi`: body mass index (weight in kg/(height in m)$^2$)
+- `ped`: diabetes pedigree function.
+- `age`: age in years
+
+---
+```{R, include=FALSE}
 summary(ctrain)
+```
 
-
-ctrain.tmp<-ctrain
-ctrain.tmp$diabetes<-as.factor(ctrain.tmp$diabetes)
-#ctrain.tmp$npreg<-as.factor(ctrain.tmp$npreg)
+---
+```{r, echo=FALSE, message=FALSE}
+ctrain.tmp=ctrain
+ctrain.tmp$diabetes=as.factor(ctrain.tmp$diabetes)
 ggpairs(ctrain.tmp)
+```
+```{r, echo=FALSE}
 corrplot(cor(ctrain))
+```
 
+## Skalering
 
-#Scale and center data
-mean <- apply(ctrain[,-1], 2, mean) #not diabetes, in column 1                                 
+```{r,echo=TRUE}
+#Data already divided into train and test set
+
+mean <- apply(ctrain[,-1], 2, mean)                                
 std <- apply(ctrain[,-1], 2, sd)
 train.x <- data.frame(scale(ctrain[,-1], center = mean, scale = std))
-test.x <- data.frame(scale(ctest[,-1], center = mean, scale = std)) # normalized based on the whole training set
+test.x <- data.frame(scale(ctest[,-1], center = mean, scale = std))
 
 train.y <- as.factor(ctrain[,1])
 test.y <- as.factor(ctest[,1])
 train.xy <- data.frame(train.x,diabetes=train.y)
 test.xy <- data.frame(test.x,diabetes=test.y)
+```
 
+```{r, include=FALSE}
 resmat=matrix(ncol=2,nrow=8)
 # misclassification rate test data, AUC
 # for all the methods considered here
 colnames(resmat)=c("Misclassification rate","AUC")
 rownames(resmat)=c("KNN","LDA","logistic regression","classification tree","pruned tree","SVC","SVM","NN")
+```
 
-#===============================================================================================
-#Need factors to have valid var.names for trainControl()
+```{r, include=FALSE}
 knn.train.y <- as.factor(ctrain[,1]) 
 knn.test.y <- as.factor(ctest[,1])
+```
+## K-Nearest-Neighbours
+Cross-validation er vanskelig.
+```{r, echo=TRUE}
 knn.train.y <- factor(knn.train.y, labels=c("O","I")) 
 knn.test.y <- factor(knn.test.y, labels=c("O", "I"))
 knn.train.xy <- data.frame(train.x,diabetes=knn.train.y)
-knn.test.xy <- data.frame(test.x,diabetes=knn.test.y)
+knn.test.xy <- data.frame
+
+#Easy way to choose good K
+train.control <- trainControl(method = "cv", number=5, classProbs=TRUE, summaryFunction = twoClassSummary)
+```
+## K-Nearest-Neighbours
+```{r,echo=TRUE}
 
 #K nearest neighbours classification:
 
-set.seed(0)
-#CV to find best K
-train.control <- trainControl(method = "cv", number=5, classProbs=TRUE, summaryFunction = twoClassSummary)
 #train knn model
 knn.mod <- train(diabetes ~ ., data=knn.train.xy, "knn", trControl = train.control,tuneLength=50)
+```
+
+```{r, echo=TRUE}
 print(knn.mod)
+```
+
+```{r, include=FALSE}
 #test with test data
 knn.res <- predict(knn.mod,newdata=test.x)
 knn.prob <- predict(knn.mod,newdata=test.x, type="prob")
@@ -71,10 +123,11 @@ knn.missrate <- 1 - sum(diag(knn.conf))/sum(knn.conf)
 #plot ROC
 knn.roc <- roc(knn.test.y, knn.prob[,2])
 ggroc(knn.roc)+ggtitle("ROC curve - K-Nearest-Neighbours") + annotate("text", x = 0.25, y = 0.3, label = paste("AUC = ", as.character(round(auc(knn.roc), 4))))
+```
 
+```{r, include=FALSE}
 resmat[1,1] = knn.missrate
 resmat[1,2] = knn.roc$auc
-#===============================================================================================
 
 #train lda model
 lda.mod <- lda(diabetes~npreg+glu+bp+skin+bmi+ped+age, data=train.xy,prior=c(0.5,0.5))
@@ -103,22 +156,19 @@ ggroc(logist.roc)+ggtitle("ROC curve - Logistic regression") + annotate("text", 
 
 resmat[3,1] = logist.missrate
 resmat[3,2] = logist.roc$auc
-#===============================================================================================
+set.seed(2) #tree
+```
 
+```{r,echo=TRUE}
 #Classification tree:
-
-set.seed(2)
 tree.mod <- tree(diabetes ~ ., train.xy, split="gini")
-
 plot(tree.mod)
-text(tree.mod, pretty=1, cex=.8)
-
-summary(tree.mod)
-
+text(tree.mod, pretty=1, cex=.6)
+```
+```{r, echo=FALSE}
 tree.prob <- predict(tree.mod,newdata = test.x)
 tree.res <- predict(tree.mod, newdata = test.x, type="class")
 tree.conf <- confusionMatrix(tree.res, test.y)$table
-print(tree.conf)
 #Misclassification rate:
 tree.missrate <- 1 - sum(diag(tree.conf))/sum(tree.conf)
 
@@ -130,11 +180,16 @@ resmat[4,2] = tree.roc$auc
 
 #CV to find best number of splits in tree
 #Not completely correct to use cv on already scaled data
-tree.cv <- cv.tree(tree.mod, FUN = prune.tree)
-plot(tree.cv$size, tree.cv$dev, type = "b")
-
-#Prune tree down to 10 splits
-pruned.mod <- prune.tree(tree.mod, best = 3)
+```
+```{r, echo=TRUE}
+cv.fit <- cv.tree(tree.mod)
+size <- cv.fit$size
+deviance <- cv.fit$dev
+plot(size,deviance,type='b')
+```
+```{r,echo=TRUE}
+best=cv.fit$size[which.min(cv.fit$dev)]
+pruned.mod <- prune.tree(tree.mod, best = best)
 summary(pruned.mod)
 plot(pruned.mod)
 text(pruned.mod, pretty = 1, cex=0.8)
@@ -151,10 +206,9 @@ ggroc(pruned.roc)+ggtitle("ROC curve - Pruned tree") + annotate("text", x = 0.25
 
 resmat[5,1] = pruned.missrate
 resmat[5,2] = pruned.roc$auc
-#===============================================================================================
+```
 
-#Support vector classifier:
-
+```{r, include=FALSE}
 set.seed(1)
 svc.cv <- tune(svm, diabetes ~., data=train.xy, 
                  kernel="linear", type="C-classification",
@@ -179,9 +233,9 @@ svm.missrate <- 1 - sum(diag(svm.conf))/sum(svm.conf)
 
 resmat[6,1] = svc.missrate
 resmat[7,1] = svm.missrate
+```
 
-#===============================================================================================
-
+```{r, message=FALSE}
 #Feed forward neural network with one hidden layer
 #No hidden layers are better in this situation -> logistic regression
 #nnet allows only zero or one hidden layer
@@ -194,7 +248,10 @@ test.target <- as.factor(ctest[,1])
 
 #CV to decide number of nodes in hidden layer:
 
-set.seed(1)
+set.seed(0)
+```
+
+```{r, echo=TRUE}
 num.nodes <- c(0:10,15,20,25,30,50)
 # num.nodes <- c(0:20)
 k <- 5
@@ -218,13 +275,14 @@ for (j in 1:k){
   }
 }
 
-
 average.misclass <- apply(mismat, 1, sum)/k
+```
+```{r, message=FALSE}
 plot.window(xlim=c(0,50),ylim=c(0,100))
 plot(num.nodes,average.misclass, type="l")
 
 nnet.mod <- nnet(formula=diabetes~npreg+glu+bp+skin+bmi+ped+age, data=train.xy, size=0, linout=FALSE, skip=TRUE, maxit=5000)
-plotnet(nnet.mod)
+
 nnet.res <- predict(nnet.mod, newdata=test.x, type="class")
 nnet.conf <- confusionMatrix(factor(nnet.res), test.y)$table
 nnet.missrate = 1 - sum(diag(nnet.conf))/sum(nnet.conf)
@@ -235,7 +293,9 @@ ggroc(nnet.roc)+ggtitle("ROC curve - Neural network") + annotate("text", x = 0.2
 
 resmat[8,1] = nnet.missrate
 resmat[8,2] = nnet.roc$auc
+```
 
+```{r, echo=FALSE}
 print(resmat)
 
 plot(knn.roc)
@@ -244,3 +304,6 @@ plot(logist.roc,add=TRUE)
 plot(tree.roc,add=TRUE)
 plot(pruned.roc,add=TRUE)
 plot(nnet.roc,add=TRUE)
+```
+
+
