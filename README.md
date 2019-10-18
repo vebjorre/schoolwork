@@ -1,7 +1,7 @@
 # Folder to show a small sample of my schoolwork.
 
 Keep in mind that the coding is done to fulfill demands from professors, not necessarily to be elegant and clean :)
-## Presentation_interview:
+## [Presentation for interview](Presentation_interview.pptx):
 Presentation for job interview fall 2019.
 
 ## Deep_learning.py:
