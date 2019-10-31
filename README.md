@@ -1,8 +1,6 @@
 # Folder to show a small sample of my schoolwork.
 
 Keep in mind that the coding is done to fulfill demands from professors, not necessarily to be elegant and clean :)
-## [Presentation for interview](Presentation_interview.pptx):
-Presentation for job interview fall 2019. Based on classification project in TMA4268.
 
 ## [Neural Net from scratch](Deep_learning.py):
 Project in TMA4315 Numerical mathematics.
