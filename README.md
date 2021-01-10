@@ -9,7 +9,7 @@ Given red/blue points with coordinates in R^4, make a neural network to predict 
 ## [Different classification models](Diabetes_classification.R):
 Project in TMA4268 Statistical learning.
 Fit different models to a dataset and evaluate the models.
-Fitted decision K-nearest neighbours, trees, support vector machine, neural network.
+Fitted K-nearest neighbours, decision trees, support vector machine, neural network.
 
 ## [Optimisation algorithms](Optimisation_problem.py):
 Project in TMA4180 Optimisation.
